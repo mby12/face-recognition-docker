@@ -15,6 +15,7 @@ RUN npm install --build-from-source canvas
 RUN npm install face-api.js@0.21.0
 RUN npm install @tensorflow/tfjs-node@1.2.11
 
+
 # Setup the environmental varibles 
 ENV PORT=1890
 ENV USE_TF='true'

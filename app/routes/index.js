@@ -15,6 +15,7 @@ router.get('/', async function (req, res) {
 router.use(require('./options.js'));
 router.use(require('./detect.js'));
 router.use(require('./recognise.js'));
+router.use(require('./descriptors.js'));
 
 // Setup not found last
 router.get('*', async function (req, res) {

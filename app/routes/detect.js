@@ -32,7 +32,7 @@ router.post('/detect',
 
             // Else reply with detections object 
             else if (req.matches) {
-                res.send(req.matches);
+                res.json({ success: 200, data: req.matches });
             }
 
             // Else respond with an internal error

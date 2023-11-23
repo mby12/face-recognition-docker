@@ -17,7 +17,7 @@ module.exports = async function (req, res, next) {
         // Check the image exists and is valid
         if (req.app.locals.models_loaded && isType(req.canvas, Canvas)) {
             // Choose to run either recognition or detection
-            if (req.path === '/detect') {
+            if (req.path === '/detect' || req.path === "/descriptors") {
                 detect_faces(
                     req.canvas,
                     req.model_options,

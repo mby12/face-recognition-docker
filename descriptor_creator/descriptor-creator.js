@@ -1,12 +1,13 @@
 // Get the environmental variables
 const use_tf = (process.env.USE_TF == 'true') || true
-const weights_path = process.env.WEIGHTS_PATH || `./app/weights`
-const faces_folder = process.env.FACES_FOLDER || `./descriptor_creator/faces`;
+const weights_path = `/app/weights`
+const faces_folder = `/usr/app/faces`;
 const dectections_folder = process.env.DETECTION_FOLDER || `./descriptor_creator/detections`;
 const descriptor_save_path = process.env.DESCRIPTOR_SAVE_PATH || `./descriptor_creator`
 
 // Import the packages
-const fs = require('fs');
+const fs = require('fs/promises');
+const fsa = require('fs');
 const path = require('path');
 
 // Import face-api.js
@@ -48,70 +49,109 @@ async function create_descriptors() {
     let folders_processed = 0;
     let labelled_descriptors = []
 
+    // setInterval(() => {
+    //     console.log("ehe");
+    // }, 2000);
+    // return;
+
     // Walk through each folder
-    fs.readdir(faces_folder, (err, folders) => {
-        folders.forEach(async function (folder) {
-            // Current folder
-            let current_folder = path.join(faces_folder, folder);
+    const folders = await fs.readdir(faces_folder);
+    if (folders.length == 0) {
+        console.log("empty folder supplied");
+        return;
+    };
 
-            // Read each file in the folder
-            fs.readdir(current_folder, (err, files) => {
-                // Debug
-                console.log('Processing faces in ' + folder)
+    console.log("folders", folders);
+    for (const folderw of folders) {
 
-                // Create a descriptors array 
-                let files_processed = 0;
-                let descriptors = [];
+        const join_folder = path.join(faces_folder, folderw);
+        
+        if (!fsa.existsSync(join_folder)){
+            console.log(join_folder, "not exists, skipping");
+            continue;
+        }
 
-                files.forEach(async function (file) {
-                    // Debug 
-                    console.log("- Started processing " + file)
+        if(!(await fs.lstat(join_folder)).isDirectory()) {
+            console.log(join_folder, "not a directory, skipping");
+            continue;
+        }
+        let current_folder = path.join(faces_folder, folderw);
 
-                    // Read file from system 
-                    const file_data = fs.readFileSync(path.join(current_folder, file))
+        const files = await fs.readdir(current_folder);
+        if (files.length == 0) {
+            console.log("empty files, skipping");
+            continue;
+        }
+        // Read each file in the folder
+        console.log('Processing faces in ' + join_folder)
 
-                    // Create a new image to run detection on
-                    const img = new Image;
-                    img.src = file_data;
+        // Create a descriptors array 
+        let files_processed = 0;
+        let descriptors = [];
 
-                    // Make a forward pass of each network for the detections
-                    const detections = await faceapi.detectSingleFace(img)
-                        .withFaceLandmarks()
-                        .withFaceDescriptor()
-                    if (detections) descriptors.push(detections.descriptor);
+        for (const file of files) {
+            // Debug 
+            console.log("- Started processing " + file)
 
-                    // Draw the detection on the image for reference
-                    const detected_img = faceapi.createCanvasFromMedia(img)
-                    faceapi.draw.drawDetections(detected_img, detections)
-                    faceapi.draw.drawFaceLandmarks(detected_img, detections)
+            // Read file from system 
+            const file_data = await fs.readFile(path.join(current_folder, file))
 
-                    // Save the detected image
-                    const saveDir = path.join(dectections_folder, folder);
-                    if (!fs.existsSync(saveDir)) fs.mkdirSync(saveDir);
-                    fs.writeFileSync(path.join(saveDir, "/detected-" + file), detected_img.toBuffer())
+            // Create a new image to run detection on
+            const img = new Image;
+            img.src = file_data;
 
-                    // If the array is at the end create a labelled descriptor 
-                    files_processed++
-                    console.log("- Finsihed processing file " + file + " (" + files_processed + " out of " + files.length + ")")
-                    if (files_processed === files.length && descriptors.length) {
-                        // Create a labelled descriptor
-                        labelled_descriptors.push(new faceapi.LabeledFaceDescriptors(
-                            folder,
-                            descriptors
-                        ));
+            // Make a forward pass of each network for the detections
+            const detections = await faceapi.detectSingleFace(img)
+                .withFaceLandmarks()
+                .withFaceDescriptor()
+            if (detections) descriptors.push(detections.descriptor);
 
-                        // Save the descriptors if all folders have completed
-                        folders_processed++
-                        console.log("Finsihed processing folder " + folder + " (" + folders_processed + " out of " + folders.length + ")")
-                        if (folders_processed === folders.length && labelled_descriptors.length) {
-                            console.log('Saving descriptors')
-                            fs.writeFileSync(path.join(descriptor_save_path, `descriptors.json`), JSON.stringify(labelled_descriptors))
-                        }
-                    }
-                });
-            });
-        });
-    });
+            // Draw the detection on the image for reference
+            const detected_img = faceapi.createCanvasFromMedia(img)
+            faceapi.draw.drawDetections(detected_img, detections)
+            faceapi.draw.drawFaceLandmarks(detected_img, detections)
+
+            // Save the detected image
+            const saveDir = path.join(dectections_folder, join_folder);
+            if (!fsa.existsSync(saveDir)) fsa.mkdirSync(saveDir, { recursive: true });
+
+            await fs.writeFile(path.join(saveDir, "/detected-" + file), detected_img.toBuffer())
+
+            // If the array is at the end create a labelled descriptor 
+            files_processed++
+            console.log("- Finsihed processing file " + file + " (" + files_processed + " out of " + files.length + ")")
+            if (files_processed === files.length && descriptors.length) {
+                // Create a labelled descriptor
+                labelled_descriptors.push(new faceapi.LabeledFaceDescriptors(
+                    join_folder,
+                    descriptors
+                ));
+
+                // Save the descriptors if all folders have completed
+                folders_processed++
+                console.log("Finsihed processing folder " + join_folder + " (" + folders_processed + " out of " + folders.length + ")")
+                if (folders_processed === folders.length && labelled_descriptors.length) {
+                    console.log('Saving descriptors')
+                    await fs.writeFile(path.join(descriptor_save_path, `descriptors.json`), JSON.stringify(labelled_descriptors))
+                    // process.exit(0);
+                    
+                }
+            }
+        }
+    }
+    // files.forEach(async function (file) {
+
+    // });
+    // , (err, files) => {
+    //     // Debug
+
+    // });
+    // folders.forEach(async function (folder) {
+    //     // Current folder
+    // });
+
+    // fs.readdir(faces_folder, (err, folders) => {
+    // });
 }
 
 // Run the main script

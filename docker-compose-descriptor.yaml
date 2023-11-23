@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  face_recognition_descriptor_build:
+    build: 
+      context: .
+      dockerfile: ./Dockerfiles/build-descriptors.dockerfile
+    image: build_descriptor:1.0.0
+    environment:
+      - FACES_FOLDER=./faces
+      - DETECTION_FOLDER=./detections
+      - DESCRIPTOR_SAVE_PATH=./
+      - USE_TF=true
+    networks:
+      - main_mongo
+
+networks:
+  main_mongo:
+    name: mongo-network
+    external: true

@@ -24,33 +24,37 @@ catch (err) {
 }
 
 // Import the express modules
-let express = require('express');
-let app = express();
 
 // Import the helper modules
 const load_models = require('./helpers/load_models');
 const load_descriptors = require('./helpers/load_descriptors');
 const parse_model_options = require('./helpers/parse_model_options');
 const parse_detection_options = require('./helpers/parse_detection_options');
+const globalMongoConnection = require('./helpers/mongo_connection');
+const express_app = require('./helpers/express_app');
+var cors = require('cors')
 
-// Load in Application Variables 
-load_models(weights_path).then((result) => {
-    app.locals.models_loaded = result;
-}).catch(err => {
-    throw(err);
-})
-load_descriptors(descriptor_path).then(matchers => {
-    app.locals.face_matchers = matchers;
-}).catch(err => {
-    console.warn("No descriptors loaded on start\n", err);
-});
-app.locals.model_options = parse_model_options(process.env.MODEL_OPTIONS || { model: 'ssd', minConfidence: 0.6 });
-app.locals.detection_options = parse_detection_options(process.env.DETECTION_OPTIONS || {});
+function init() {
+    // Load in Application Variables 
+    load_models(weights_path).then((result) => {
+        express_app.locals.models_loaded = result;
+    }).catch(err => {
+        throw (err);
+    })
+    load_descriptors();
+}
 
+express_app.locals.model_options = parse_model_options(process.env.MODEL_OPTIONS || { model: 'ssd', minConfidence: 0.6 });
+express_app.locals.detection_options = parse_detection_options(process.env.DETECTION_OPTIONS || {});
+express_app.use(cors());
 // Configure the routes
-app.use(require('./routes/index'));
+express_app.use(require('./routes/index'));
 
 // Start the application
-let server = app.listen(port, function () {
-    console.log(`Listening on port ${port}...`);
+let server = express_app.listen(port, function () {
+    globalMongoConnection.connect().then(function () {
+        init();
+        console.log("mongo connected");
+        console.log(`Listening on port ${port}...`);
+    });
 });

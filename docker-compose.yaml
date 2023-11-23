@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  face_recognition_test:
+    build: .
+    ports:
+      - "8080:1890"
+    volumes:
+      - ./descriptor_creator/descriptors.json:/usr/app/descriptors.json
+      - ./app:/usr/app
+      - /usr/app/node_modules
+    environment:
+      - PORT=1890
+      - USE_TF=true
+      - WEIGHTS_PATH=./weights
+      - DESCRIPTOR_PATH=./descriptors.json
+      - MODEL_OPTIONS={"model":"ssd","minConfidence":0.6}
+      - DETECTION_OPTIONS={}
+    networks:
+      - face_recognition_network
+      - main_mongo
+
+networks:
+  main_mongo:
+    name: mongo-network
+    external: true
+  face_recognition_network:
+    driver: bridge

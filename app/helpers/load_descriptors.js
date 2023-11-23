@@ -7,68 +7,80 @@ faceapi.env.monkeyPatch({ Canvas, Image, ImageData })
 
 // Import helpers
 const { isArray } = require('./type_checks');
+const mongo_database = require('./mongo_database');
+const express_app = require('./express_app');
+const mongoCollection = mongo_database.collection('faces');
 
 // Export main function
-module.exports = async function (path) {
-    return new Promise((resolve, reject) => {
-        try {
-            // Check if file exists 
-            fs.stat(path, (err, stats) => {
-                if (err) reject(err);
-                else if (stats.isFile()) {
-                    // Load file from path 
-                    fs.readFile(path, (err, contents) => {
-                        if (err) reject(err);
-                        else {
-                            // Parse as JSON object
-                            let labelled_descriptor_array = JSON.parse(contents);
+module.exports = async function () {
+    // return new Promise((resolve, reject) => {
+    try {
+        const results = await mongoCollection.find({}).toArray();
 
-                            // Extract each descriptor with label from object 
-                            if (isArray(labelled_descriptor_array)) {
-                                // Create a descriptor array 
-                                let matcher_array = [];
-                                let descriptors_loaded = 0;
+        let matcher_array = [];
+        // let descriptors_loaded = 0;
+        console.log(`loading ${results.length} descriptors ...`);
+        for (const labelled_descriptor of results) {
+            if ('label' in labelled_descriptor && 'descriptors' in labelled_descriptor) {
+                // Get the label of the descriptor
+                let label = labelled_descriptor.label;
 
-                                // Parse each labbeled descriptor from the contents
-                                labelled_descriptor_array.forEach((labelled_descriptor) => {
-                                    if ('label' in labelled_descriptor && 'descriptors' in labelled_descriptor) {
-                                        // Get the label of the descriptor
-                                        let label = labelled_descriptor.label;
-
-                                        // Add each descriptor to an array to add to constructor
-                                        let descriptor_array = []
-                                        labelled_descriptor.descriptors.forEach(function (array) {
-                                            descriptor_array.push(new Float32Array(array))
-                                        })
-
-                                        // Create a face matcher from the data and push to the matcher array 
-                                        const descriptor = new faceapi.LabeledFaceDescriptors(label, descriptor_array);
-                                        matcher_array.push(new faceapi.FaceMatcher(descriptor));
-                                    }
-                                    else {
-                                        reject(new Error('Parsed descriptor does not have the correct feilds'));
-                                    }
-
-                                    // Reslove when all are loaded
-                                    descriptors_loaded++
-                                    if (descriptors_loaded == labelled_descriptor_array.length) {
-                                        resolve(matcher_array);
-                                    }
-                                });
-                            }
-                            else {
-                                reject(new Error('Failed to parse contents of file to array'));
-                            }
-                        }
-                    });
+                // Add each descriptor to an array to add to constructor
+                let descriptor_array = []
+                
+                for (const iterator of labelled_descriptor.descriptors) {
+                    descriptor_array.push(new Float32Array(iterator))
                 }
-                else {
-                    reject(new Error('Descriptor path passed was not a file'));
-                }
-            });
+
+                // Create a face matcher from the data and push to the matcher array 
+                const descriptor = new faceapi.LabeledFaceDescriptors(label, descriptor_array);
+                matcher_array.push(new faceapi.FaceMatcher(descriptor));
+            }
+            else {
+                // throw new Error('Parsed descriptor does not have the correct feilds');
+                continue;
+            }
+
+            // Reslove when all are loaded
+            // descriptors_loaded++;
         }
-        catch (err) {
-            reject(err);
-        }
-    });
+        console.log(`loaded ${results.length} descriptors`);
+        express_app.locals.face_matchers = matcher_array;
+        return matcher_array;
+
+        // Parse each labbeled descriptor from the contents
+        // labelled_descriptor_array.forEach((labelled_descriptor) => {
+
+        // });
+        // Check if file exists 
+        // fs.stat(path, (err, stats) => {
+        //     if (err) reject(err);
+        //     else if (stats.isFile()) {
+        //         // Load file from path 
+        //         fs.readFile(path, (err, contents) => {
+        //             if (err) reject(err);
+        //             else {
+        //                 // Parse as JSON object
+        //                 let labelled_descriptor_array = JSON.parse(contents);
+
+        //                 // Extract each descriptor with label from object 
+        //                 if (isArray(labelled_descriptor_array)) {
+        //                     // Create a descriptor array 
+
+        //                 }
+        //                 else {
+        //                     reject(new Error('Failed to parse contents of file to array'));
+        //                 }
+        //             }
+        //         });
+        //     }
+        //     else {
+        //         reject(new Error('Descriptor path passed was not a file'));
+        //     }
+        // });
+    }
+    catch (err) {
+        console.error(err);
+    }
+    // });
 };
