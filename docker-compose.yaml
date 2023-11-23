@@ -9,6 +9,8 @@ services:
       - ./descriptor_creator/descriptors.json:/usr/app/descriptors.json
       - ./app:/usr/app
       - /usr/app/node_modules
+    env_file:
+      - .env.local
     environment:
       - PORT=1890
       - USE_TF=true
