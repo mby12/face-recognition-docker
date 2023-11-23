@@ -4,3 +4,5 @@ node_modules
 descriptors.json
 
 **/detections
+
+.env.local
