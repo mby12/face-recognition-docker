@@ -4,7 +4,7 @@ services:
   face_recognition_test:
     build: .
     ports:
-      - "8080:1890"
+      - "6212:1890"
     volumes:
       - ./descriptor_creator/descriptors.json:/usr/app/descriptors.json
       - ./app:/usr/app
