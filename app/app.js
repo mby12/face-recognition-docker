@@ -44,7 +44,7 @@ function init() {
     load_descriptors();
 }
 
-express_app.locals.model_options = parse_model_options(process.env.MODEL_OPTIONS || { model: 'ssd', minConfidence: 0.6 });
+express_app.locals.model_options = parse_model_options(process.env.MODEL_OPTIONS || { model: 'ssd', minConfidence: 0.8 });
 express_app.locals.detection_options = parse_detection_options(process.env.DETECTION_OPTIONS || {});
 express_app.use(cors());
 // Configure the routes
