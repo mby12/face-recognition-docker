@@ -6,3 +6,4 @@ descriptors.json
 **/detections
 
 .env.local
+.env
