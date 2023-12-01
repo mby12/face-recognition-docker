@@ -54,8 +54,9 @@ router.post("/descriptors",
             // Make a forward pass of each network for the detections
             const detections = await faceapi.detectSingleFace(img)
                 .withFaceLandmarks()
-                .withFaceDescriptor()
-            console.log("detected face", detections);
+                .withFaceDescriptor();
+
+            console.log("detected face", typeof detections);
 
             if (!detections) throw new Error("No Face Detected");
             descriptors.push(detections.descriptor);
@@ -65,7 +66,7 @@ router.post("/descriptors",
                 descriptors
             );
             await faceCollection.deleteMany({
-                label: ld.label
+                label: name
             });
             const mongoInsertResult = await faceCollection.insertOne(
                 {
@@ -76,9 +77,9 @@ router.post("/descriptors",
             );
             // const mongoInsertResult = true;
             await load_descriptors();
-            return response.json({ mongoInsertResult, ld, labelled_descriptors })
+            return response.json({ code: 200, mongoInsertResult, ld, labelled_descriptors })
         } catch (error) {
-            return response.json({code: 500, message: error?.message || "Unknown Error"})
+            return response.json({ code: 500, message: error?.message || "Unknown Error" })
         }
     }
 )
