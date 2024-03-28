@@ -38,10 +38,7 @@ router.post(
       let descriptors = [];
       let labelled_descriptors = [];
       if (!file) return response.json({ message: "empty files" });
-      if (request.query.return_img && request.drawn_canvas) {
-        response.contentType("jpeg");
-        return response.end(request.drawn_canvas.toBuffer(), "binary");
-      }
+      
       // Debug
       console.log("- Started processing ");
 
@@ -63,6 +60,14 @@ router.post(
       if (!detections) throw new Error("No Face Detected");
       descriptors.push(detections.descriptor);
 
+      let captured_face_detected = undefined;
+
+      if (request.query.return_img && request.drawn_canvas) {
+        captured_face_detected = Buffer.from(
+          request.drawn_canvas.toBuffer()
+        ).toString("base64");
+      }
+
       const ld = new faceapi.LabeledFaceDescriptors(name, descriptors);
       await faceCollection.deleteMany({
         label: name,
@@ -71,7 +76,9 @@ router.post(
         label: ld.label,
         descriptors: ld.descriptors.map((d) => Array.from(d)),
         captured_face: Buffer.from(file_data).toString("base64"),
+        captured_face_detected,
       });
+
       // const mongoInsertResult = true;
       await load_descriptors();
       return response.json({
